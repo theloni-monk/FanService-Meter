@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import os 
+from os import path
 
 labels = ("hentai", "shonen")
 class fsm_ai:
@@ -10,7 +11,11 @@ class fsm_ai:
     def __init__(self, img_size = (300, 300), batch_size=8, use_premade = True, make_new = False):
         self.img_size = img_size
         self.batch_size = batch_size
-        self._model = keras.models.load_model('wholemodel.h5') if use_premade else None
+        
+
+        path_prefix = path.dirname(path.abspath(__file__))
+        model_path = path.join(path_prefix, 'wholemodel.h5')
+        self._model = keras.models.load_model(model_path) if use_premade else None
         try:
             assert not (use_premade and make_new)
         except AssertionError:
@@ -109,7 +114,7 @@ class fsm_ai:
         """Accepts params @nullable img_in, img_in can only be None if filename is provided in kwargs"""
         
         img = img_in
-        if img == None:
+        if not img.any():
             img = cv2.imread(kwargs["filename"])
             img = cv2.resize(img, self.img_size)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -118,6 +123,8 @@ class fsm_ai:
         img_array = tf.expand_dims(img_array, 0)
         predictions = self._model.predict(img_array)
         score = predictions[0]
-        score = 100 * (1 - score) if 1-score > 0.5 else 100 * score
+        # hentai is 0, shonen is 1
         label =  labels[0] if 1 - score > 0.5 else labels[1]
+        score = 100 * (1 - score) if 1-score > 0.5 else 100 * score
+        
         return score, label
